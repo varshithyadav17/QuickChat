@@ -171,11 +171,11 @@ await connectDB();
 
 
 // here we are telling that our backend is ready and listenening for incoming requests on the specified port(either from .env or 5000). When the server starts successfully, it will log a message to the console indicating that it is running and on which port it is listening.
-if(process.env.NODE_ENV !== "production"){
-    const PORT = process.env.PORT || 5000;
-    server.listen(PORT, () => console.log("Server is running on port: " + PORT));
+const PORT = process.env.PORT || 5000;
 
-}
+server.listen(PORT, () => {
+    console.log("Server is running on port:", PORT);
+});
 
 //export server for vercel or render 
 export default server;
