@@ -20,7 +20,10 @@ const server = http.createServer(app);
 
 // Initialize socket.io server and pass the HTTP server to it. This allows socket.io to listen for WebSocket connections on the same server that is handling our HTTP requests. By doing this, we can enable real-time communication between the client and server using WebSockets, which is essential for features like instant messaging in a chat application.
 export const io = new Server(server, {
-    cors: { origin: "*" }
+    cors: { 
+        origin: process.env.CLIENT_URL,
+        credentials: true
+     }
 })
 
 // store online users in a map where key is user id and value is socket id
@@ -153,7 +156,10 @@ io.on("connection", async (socket) => {
 //express.json() is used to parse incoming JSON data in the request body and make it available under req.body. The limit option is set to "4mb" to restrict the maximum size of the JSON payload that can be accepted by the server to 4 megabytes. This helps prevent potential issues with excessively large requests that could consume too much server resources or lead to denial of service attacks.
 //app.use() ise used to mount the specified middleware function(s) at the path which is being specified.
 app.use(express.json({limit: "4mb"}));
-app.use(cors());
+app.use(cors({
+    origin: process.env.CLIENT_URL,
+    credentials: true
+}));
 
 app.use("/api/status", (req, res) => res.send("server is live"));
 app.use("/api/auth", userRouter)
