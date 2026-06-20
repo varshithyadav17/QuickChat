@@ -21,7 +21,7 @@ const server = http.createServer(app);
 // Initialize socket.io server and pass the HTTP server to it. This allows socket.io to listen for WebSocket connections on the same server that is handling our HTTP requests. By doing this, we can enable real-time communication between the client and server using WebSockets, which is essential for features like instant messaging in a chat application.
 export const io = new Server(server, {
     cors: { 
-        origin: process.env.CLIENT_URL,
+        origin: [process.env.CLIENT_URL, "http://localhost:5173"],
         credentials: true
      }
 })
@@ -157,7 +157,7 @@ io.on("connection", async (socket) => {
 //app.use() ise used to mount the specified middleware function(s) at the path which is being specified.
 app.use(express.json({limit: "4mb"}));
 app.use(cors({
-    origin: process.env.CLIENT_URL,
+    origin: [process.env.CLIENT_URL, "http://localhost:5173"],
     credentials: true
 }));
 
