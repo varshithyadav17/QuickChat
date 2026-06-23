@@ -172,9 +172,9 @@ const ChatContainer = () => {
 
     <div className='flex flex-col h-[calc(100%-120px)] overflow-y-scroll p-3 pb-6'>
 
-        {messages.map((msg, index) => (
+        {messages.map((msg) => (
 
-        <div key={index} className={`flex items-end gap-2 justify-end ${msg.senderId !== authUser._id && 'flex-row-reverse'}`}>
+        <div key={msg._id} className={`flex items-end gap-2 justify-end ${String(msg.senderId) !== String(authUser._id) && 'flex-row-reverse'}`}>
 
         {msg.image ? (
             <img src={msg.image} alt="" className='max-w-[230px] border border-gray-700 rounded-lg overflow-hidden mb-8' />
@@ -185,7 +185,7 @@ const ChatContainer = () => {
         )}
 
         <div className="text-center text-xs">
-            <img src={msg.senderId === authUser._id ? (authUser?.profilePic || assets.avatar_icon) : (selectedUser?.profilePic || assets.avatar_icon)} alt="" className='w-7 rounded-full' />
+            <img src={String(msg.senderId) === String(authUser._id) ? (authUser?.profilePic || assets.avatar_icon) : (selectedUser?.profilePic || assets.avatar_icon)} alt="" className='w-7 rounded-full' />
             <p className='text-gray-500'>{formatMessageTime(msg.createdAt)}</p>
         </div>
 

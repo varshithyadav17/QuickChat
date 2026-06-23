@@ -7,6 +7,12 @@ const userSchema = new mongoose.Schema({
     profilePic: {type: String, default: ""},
     bio: {type: String},
 
+    email: {
+      type: String,
+      unique: true,
+      index: true
+    },
+
     friends: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: "User"

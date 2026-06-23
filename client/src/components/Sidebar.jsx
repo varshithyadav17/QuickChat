@@ -19,23 +19,11 @@ const Sidebar = () => {
     const navigate = useNavigate()
 
     const filteredUsers = input ? users.filter((user) => user.fullName.toLowerCase().includes(input.toLowerCase())) : users
-
-    useEffect(()=>{
-        getUsers()
-        getRequests()
-    },[onlineUsers])
     
     const changeTab = (tab) => {
-
         setActiveTab(tab)
-
         setSearchEmail("")
         setSearchedUser(null)
-
-        if(tab === "requests"){
-            getRequests()
-        }
-
     }
 
     return (
@@ -274,7 +262,6 @@ const Sidebar = () => {
                         setSelectedUser(searchedUser)
                         getRelationshipStatus(searchedUser._id)
                         changeTab("friends")
-                        getUsers()
                         }}
                         className='bg-green-600 w-full py-2 mt-3 rounded-lg'
                     >

@@ -20,9 +20,10 @@ export const FriendProvider = ({children}) => {
     const [blockedUsers, setBlockedUsers] = useState([])
 
     useEffect(() => {
+        if (!authUser) return
         getRequests()
         getUsers()
-    }, [])
+    }, [authUser])
 
     useEffect(() => {
         if(!socket) return
@@ -33,7 +34,6 @@ export const FriendProvider = ({children}) => {
         })
 
         socket.on("RequestAccepted", async (data) => {
-            getUsers()
             getRequests()
             await getRelationshipStatus(data.userId)
         })
@@ -44,7 +44,6 @@ export const FriendProvider = ({children}) => {
         })
         
         socket.on("UserBlocked", async (data) => {
-            getUsers()
             getRequests()
             await getRelationshipStatus(data.userId)
         })
@@ -54,8 +53,6 @@ export const FriendProvider = ({children}) => {
             if(selectedUser?._id === data.userId){
                 await getRelationshipStatus(data.userId)
             }
-            getUsers()
-            getRequests()
         })
 
         return () => {

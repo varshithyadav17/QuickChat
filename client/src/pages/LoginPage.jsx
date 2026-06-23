@@ -12,6 +12,8 @@ const LoginPage = () => {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [bio, setBio] = useState('')
   const [isDataSubmitted, setIsDataSubmitted] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false)
+  const [otpCooldown, setOtpCooldown] = useState(0)
   
   const [loginWithOTP, setLoginWithOTP] = useState(false)
   const [otpSent, setOtpSent] = useState(false)
@@ -19,6 +21,47 @@ const LoginPage = () => {
 
 
   const {login, sendLoginOTP, verifyLoginOTP} = useContext(AuthContext)
+
+  const handleResendOTP = async () => {
+
+    if (otpLoading || otpCooldown > 0) return
+    setOtpLoading(true)
+
+    try {
+      const success = await sendLoginOTP(email)
+
+      if (success) {
+          toast.success("OTP resent")
+          startOtpCooldown()
+      }
+      
+    }catch(error) {
+      toast.error(error.message)
+
+    } finally {
+
+        setOtpLoading(false)
+
+    }
+  }
+
+  const startOtpCooldown = () => {
+
+    setOtpCooldown(60)
+
+    const timer = setInterval(() => {
+
+        setOtpCooldown(prev => {
+            if(prev <= 1){
+                clearInterval(timer)
+                return 0
+            }
+
+            return prev - 1
+        })
+
+    },1000)
+  }
 
   const onSubmitHandler = async (event) => {
     event.preventDefault();
@@ -40,11 +83,19 @@ const LoginPage = () => {
     if(currState==="Login" && loginWithOTP){
 
       if(!otpSent){
-          const success = await sendLoginOTP(email)
+          if(otpLoading || otpCooldown > 0) return
+          setOtpLoading(true)
 
-          if(success){
+          try {
+            const success = await sendLoginOTP(email)
+            if(success){
               setOtpSent(true)
+              startOtpCooldown()
+            }
+          }finally {
+            setOtpLoading(false)
           }
+
           return
       }
       if (!otp.trim()) {
@@ -132,13 +183,52 @@ const LoginPage = () => {
           ></textarea>  
         )}
 
+        {loginWithOTP && otpSent && (
+            <div className="text-sm text-right">
+
+                {
+                    otpCooldown > 0
+                    ? (
+                        <p className="text-gray-400 mb-2">
+                            Resend OTP in {otpCooldown}s
+                        </p>
+                    )
+                    : (
+                        <p
+                            className="text-violet-400 cursor-pointer hover:underline mb-2"
+                            onClick={handleResendOTP}
+                        >
+                            Didn't receive OTP? Resend OTP
+                        </p>
+                    )
+                }
+
+            </div>
+        )
+        }
+
         <button 
           type='submit'
-          className='py-3 bg-gradient-to-r from-purple-400 to-violet-600 text-white rounded-md cursor-pointer'
-
+          disabled = {otpLoading}
+          className={`py-3 rounded-md text-white transition-all
+          ${
+              otpLoading
+                  ? "bg-gray-500 cursor-not-allowed"
+                  : "bg-gradient-to-r from-purple-400 to-violet-600 cursor-pointer"
+          }`}
         >
-          {currState === "Sign up" ? "Create Account" 
-            : loginWithOTP ? (otpSent ? "Verify & Login" : "Send OTP") : "Login"
+          {currState === "Sign up"
+            ? "Create Account"
+            : loginWithOTP
+                ? (
+                    otpLoading
+                    ? "Sending..."
+
+                    : otpSent
+                    ? "Verify & Login"
+                    : "Send OTP"
+                )
+                : "Login"
           }
         </button>
 

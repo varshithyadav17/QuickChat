@@ -33,7 +33,6 @@ export const ChatProvider = ({children}) => {
     const getUsers = async ()=>{
         try {
             const { data } = await axios.get('/api/messages/users')
-            console.log(data)
             if(data.success){
                 setUsers(data.users)
                 setUnseenMessages(data.unseenMessages)
@@ -43,6 +42,38 @@ export const ChatProvider = ({children}) => {
         }
     }
 
+    const getLastMessagePreview = (message) => {
+
+        if (message.text) return message.text
+
+        if (message.image) return "📷 Photo"
+
+        if (message.video) return "🎥 Video"
+
+        if (message.file) return "📄 Document"
+
+        return "New message"
+    }
+
+    const updateUserOrder = (userId, message) => {
+        setUsers(prevUsers => {
+            const updatedUsers = prevUsers.map(user =>
+                user._id === userId
+                    ? {
+                        ...user,
+                        lastMessage: getLastMessagePreview(message),
+                        lastMessageTime: message.createdAt
+                    }
+                    : user
+            )
+            const index = updatedUsers.findIndex(user => user._id === userId)
+            if (index === -1) return updatedUsers
+
+            const [activeUser] = updatedUsers.splice(index, 1)
+
+            return [activeUser, ...updatedUsers]
+        })
+    }
 
     // function to get messages for selected users
     const getMessages = async (userId)=>{
@@ -50,7 +81,6 @@ export const ChatProvider = ({children}) => {
             const {data} = await axios.get(`/api/messages/${userId}`)
             if(data.success){
                 setMessages(data.messages)
-                getUsers()
             }
         } catch (error) {
             toast.error(error.messages)
@@ -62,10 +92,8 @@ export const ChatProvider = ({children}) => {
         try {
             const { data } = await axios.post(`/api/messages/send/${selectedUser._id}`, {...messageData, senderSocketId: socket.id})
             if(data.success){
-                setMessages((prevMessages)=>{
-                   return [...prevMessages, data.message]}
-                )
-                getUsers()
+                setMessages(prev => [...prev,data.message])
+                updateUserOrder(selectedUser._id, data.message)               
             }else{
                 toast.error(data.message)
             }
@@ -86,13 +114,14 @@ export const ChatProvider = ({children}) => {
                     return [...prevMessages, newMessage]
                 })
                 axios.put(`/api/messages/mark/${newMessage._id}`)
-                getUsers()
+                updateUserOrder(newMessage.senderId, newMessage)
             }else{
                 setUnseenMessages((prevUnseenMessages) => ({
                     ...prevUnseenMessages,
                     [newMessage.senderId] : prevUnseenMessages[newMessage.senderId] ? prevUnseenMessages[newMessage.senderId] + 1 : 1
                 }))
-                getUsers()
+
+                updateUserOrder(newMessage.senderId, newMessage)
             }
         })
 
