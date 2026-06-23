@@ -143,6 +143,8 @@ export const sendLoginOTP = async (req,res)=>{
 
         await user.save()
 
+        console.log("Before sendMail")
+
         await transporter.sendMail({
             from:process.env.EMAIL_USER,
             to:email,
@@ -152,6 +154,8 @@ export const sendLoginOTP = async (req,res)=>{
                 <p>Valid for 5 minutes.</p>
             `
         })
+
+        console.log("After sendMail")
 
         res.json({
             success:true,
