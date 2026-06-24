@@ -13,7 +13,7 @@ import User from "./models/User.js"
 // create express app and HTTP server 
 const app = express();
 
-app.use(helmet())
+//app.use(helmet())
 
 // This creates a server that can receive requests from the internet/browser. It allows us to handle incoming HTTP requests and send responses back to the client. By using the http module, we can create a server that can listen for requests on a specific port and route those requests to the appropriate handlers defined in our Express app.
 const server = http.createServer(app);
