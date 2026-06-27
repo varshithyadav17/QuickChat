@@ -152,22 +152,31 @@ export const sendLoginOTP = async (req,res)=>{
         console.log("Before sendMail 123456")
 
         try {
+            console.log("Before sendMail");
+
             const info = await transporter.sendMail({
                 from: process.env.BREVO_SENDER,
                 to: email,
                 subject: "QuickChat Login OTP",
-                html: `
-                    <h2>Your OTP is ${otp}</h2>
-                    <p>Valid for 5 minutes.</p>
-                `
+                html: `<h2>Your OTP is ${otp}</h2>`,
             });
 
-            console.log("After sendMail 123456")
-            console.log("INFO:", info)
+            console.log("After sendMail");
+            console.log(info);
+
+            return res.json({
+                success: true,
+                message: "OTP sent successfully",
+            });
 
         } catch (err) {
-            console.error("SENDMAIL ERROR:")
-            console.error(err)
+            console.error("SENDMAIL ERROR");
+            console.error(err);
+
+            return res.status(500).json({
+                success: false,
+                message: err.message,
+            });
         }
 
         console.log("RETURNING SUCCESS 123456");

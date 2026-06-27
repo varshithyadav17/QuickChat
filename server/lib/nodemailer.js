@@ -9,10 +9,18 @@ export const transporter = nodemailer.createTransport({
     host: process.env.BREVO_HOST,
     port: Number(process.env.BREVO_PORT),
     secure: false,
+    requireTLS: true,
     auth: {
         user: process.env.BREVO_USER,
-        pass: process.env.BREVO_PASSWORD,
+        pass: process.env.BREVO_PASS,
     },
+
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
+
+    logger: true,
+    debug: true,
 });
 
 transporter.verify((err) => {
