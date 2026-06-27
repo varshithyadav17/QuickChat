@@ -150,8 +150,8 @@ export const sendLoginOTP = async (req,res)=>{
         console.log("Before sendMail");
 
         try {
-            const info = await transporter.sendMail({
-                from: process.env.EMAIL_USER,
+            await transporter.sendMail({
+                from: process.env.BREVO_SENDER,
                 to: email,
                 subject: "QuickChat Login OTP",
                 html: `
