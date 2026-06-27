@@ -121,6 +121,8 @@ export const updateProfile = async (req, res) => {
 
 export const sendLoginOTP = async (req,res)=>{
 
+    console.log("VERSION 123456");
+
     const { email } = req.body
 
     try{
@@ -147,7 +149,7 @@ export const sendLoginOTP = async (req,res)=>{
 
         await user.save()
 
-        console.log("Before sendMail")
+        console.log("Before sendMail 123456")
 
         try {
             const info = await transporter.sendMail({
@@ -160,7 +162,7 @@ export const sendLoginOTP = async (req,res)=>{
                 `
             });
 
-            console.log("After sendMail")
+            console.log("After sendMail 123456")
             console.log("INFO:", info)
 
         } catch (err) {
@@ -168,7 +170,7 @@ export const sendLoginOTP = async (req,res)=>{
             console.error(err)
         }
 
-        console.log("Controller finished")
+        console.log("RETURNING SUCCESS 123456");
 
         res.json({
             success:true,
