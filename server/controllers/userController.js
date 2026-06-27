@@ -126,6 +126,7 @@ export const sendLoginOTP = async (req,res)=>{
     try{
 
         const user = await User.findOne({ email })
+        
 
         if(!user){
             return res.json({
@@ -133,6 +134,9 @@ export const sendLoginOTP = async (req,res)=>{
                 message:"User not found"
             })
         }
+
+        console.log(user.email)
+
 
         const otp = Math.floor(
             100000 + Math.random()*900000
