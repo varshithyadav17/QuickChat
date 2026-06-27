@@ -1,5 +1,7 @@
 import nodemailer from "nodemailer"
 
+console.log("i entered the nodemailer")
+
 export const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
     port: 465,
@@ -10,6 +12,8 @@ export const transporter = nodemailer.createTransport({
     },
 });
 
+console.log("i middle the nodemailer")
+
 transporter.verify((error, success) => {
     if (error) {
         console.error("SMTP ERROR:", error);
@@ -17,3 +21,5 @@ transporter.verify((error, success) => {
         console.log("SMTP Server is ready");
     }
 });
+
+console.log("i complete the nodemailer")
