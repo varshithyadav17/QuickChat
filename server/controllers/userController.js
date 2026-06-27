@@ -147,19 +147,28 @@ export const sendLoginOTP = async (req,res)=>{
 
         await user.save()
 
-        console.log("Before sendMail")
+        console.log("Before sendMail");
 
-        await transporter.sendMail({
-            from:process.env.EMAIL_USER,
-            to:email,
-            subject:"QuickChat Login OTP",
-            html:`
-                <h2>Your OTP is ${otp}</h2>
-                <p>Valid for 5 minutes.</p>
-            `
-        })
+        try {
+            const info = await transporter.sendMail({
+                from: process.env.EMAIL_USER,
+                to: email,
+                subject: "QuickChat Login OTP",
+                html: `
+                    <h2>Your OTP is ${otp}</h2>
+                    <p>Valid for 5 minutes.</p>
+                `
+            });
 
-        console.log("After sendMail")
+            console.log("After sendMail");
+            console.log(info);
+
+        } catch (err) {
+            console.error("SENDMAIL ERROR:");
+            console.error(err);
+        }
+
+        console.log("Controller finished");
 
         res.json({
             success:true,
