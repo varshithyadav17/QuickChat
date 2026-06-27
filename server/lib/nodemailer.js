@@ -2,9 +2,17 @@ import nodemailer from "nodemailer"
 
 console.log("i entered the nodemailer")
 
+console.log("SMTP CONFIG");
+console.log({
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+});
+console.log("NODE:", process.version);
+
 export const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
-    port: 465,
+    port: 587,
     secure: false,
     requireTLS: true,
     auth: {
