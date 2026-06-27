@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 
-console.log("SMTP LOGIN:", process.env.BREVO_LOGIN);
+console.log("SMTP LOGIN:", process.env.BREVO_USER);
 console.log("SMTP HOST:", process.env.BREVO_HOST);
 console.log("SMTP PORT:", process.env.BREVO_PORT);
 console.log("SMTP SENDER:", process.env.BREVO_SENDER);
@@ -10,7 +10,7 @@ export const transporter = nodemailer.createTransport({
     port: Number(process.env.BREVO_PORT),
     secure: false,
     auth: {
-        user: process.env.BREVO_LOGIN,
+        user: process.env.BREVO_USER,
         pass: process.env.BREVO_PASSWORD,
     },
 });
