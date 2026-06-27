@@ -147,10 +147,10 @@ export const sendLoginOTP = async (req,res)=>{
 
         await user.save()
 
-        console.log("Before sendMail");
+        console.log("Before sendMail")
 
         try {
-            await transporter.sendMail({
+            const info = await transporter.sendMail({
                 from: process.env.BREVO_SENDER,
                 to: email,
                 subject: "QuickChat Login OTP",
@@ -160,15 +160,15 @@ export const sendLoginOTP = async (req,res)=>{
                 `
             });
 
-            console.log("After sendMail");
-            console.log(info);
+            console.log("After sendMail")
+            console.log("INFO:", info)
 
         } catch (err) {
-            console.error("SENDMAIL ERROR:");
-            console.error(err);
+            console.error("SENDMAIL ERROR:")
+            console.error(err)
         }
 
-        console.log("Controller finished");
+        console.log("Controller finished")
 
         res.json({
             success:true,
