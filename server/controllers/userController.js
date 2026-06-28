@@ -119,10 +119,9 @@ export const updateProfile = async (req, res) => {
     }
 }
 
-
+const OTP_LIMIT = 2;
+const OTP_WINDOW = 180; // 15 minutes
 export const sendLoginOTP = async (req,res)=>{
-
-    console.log("VERSION 123456");
 
     const { email } = req.body
 
@@ -130,7 +129,6 @@ export const sendLoginOTP = async (req,res)=>{
 
         const user = await User.findOne({ email })
         
-
         if(!user){
             return res.json({
                 success:false,
@@ -138,9 +136,46 @@ export const sendLoginOTP = async (req,res)=>{
             })
         }
 
-        console.log(user.email)
+        //Redis Rate Limiter
+        const key = `otp-limit:${email}`;
 
+        // Increment request count
+        const count = await redis.incr(key);
 
+        // Set expiry only on first request
+        if (count === 1) {
+            await redis.expire(key, OTP_WINDOW);
+        }
+
+        console.log("OTP Request Count:", count);
+
+        // Block if limit exceeded
+        if (count > OTP_LIMIT) {
+            const ttl = await redis.ttl(key);
+
+            const minutes = Math.floor(ttl / 60);
+            const seconds = ttl % 60;
+
+            let timeLeft = "";
+
+            if (minutes > 0) {
+                timeLeft = `${minutes} minute${minutes > 1 ? "s" : ""}`;
+
+                if (seconds > 0) {
+                    timeLeft += ` ${seconds} second${seconds > 1 ? "s" : ""}`;
+                }
+            } else {
+                timeLeft = `${seconds} second${seconds > 1 ? "s" : ""}`;
+            }
+
+            return res.json({
+                success: false,
+                message: `Too many OTP requests. Please try again after ${timeLeft}.`,
+                retryAfter: ttl
+            });
+        }
+
+        
         const otp = Math.floor(
             100000 + Math.random()*900000
         ).toString()
@@ -154,8 +189,6 @@ export const sendLoginOTP = async (req,res)=>{
                 ex: OTP_TTL 
             }
         );
-
-        console.log("OTP Stored in Redis");
 
         try {
             const response = await axios.post(
