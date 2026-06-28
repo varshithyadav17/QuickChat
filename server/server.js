@@ -9,6 +9,7 @@ import userRouter from './routes/userRoutes.js';
 import { Server } from 'socket.io';
 import friendRouter from './routes/friendRoutes.js'
 import User from "./models/User.js"
+import { redis } from "./lib/redis.js"
 
 // create express app and HTTP server 
 const app = express();
@@ -168,7 +169,6 @@ app.use("/api/friends", friendRouter)
 
 // connect to mongodb databse before starting the server
 await connectDB();
-
 
 // here we are telling that our backend is ready and listenening for incoming requests on the specified port(either from .env or 5000). When the server starts successfully, it will log a message to the console indicating that it is running and on which port it is listening.
 const PORT = process.env.PORT || 5000;
