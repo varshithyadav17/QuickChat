@@ -3,7 +3,7 @@ import User from "../models/User.js"
 import bcrypt from "bcryptjs"
 import cloudinary from "../lib/cloudinary.js"
 import { signupSchema, loginSchema } from "../validations/userValidation.js"
-import { transporter } from "../lib/nodemailer.js"
+import axios from "axios";
 
 // signup a new user 
 export const signup = async (req, res) => {
@@ -149,37 +149,58 @@ export const sendLoginOTP = async (req,res)=>{
 
         await user.save()
 
-        console.log("Before sendMail 123456")
-
         try {
-            console.log("Before sendMail");
-
-            const info = await transporter.sendMail({
-                from: process.env.BREVO_SENDER,
-                to: email,
+            const response = await axios.post(
+            "https://api.brevo.com/v3/smtp/email",
+            {
+                sender: {
+                    name: "QuickChat",
+                    email: process.env.BREVO_SENDER,
+                },
+                to: [
+                    {
+                        email: email,
+                    },
+                ],
                 subject: "QuickChat Login OTP",
-                html: `<h2>Your OTP is ${otp}</h2>`,
-            });
+                htmlContent: `
+                    <div style="font-family:Arial;padding:20px">
+                        <h2>Your Login OTP</h2>
 
-            console.log("After sendMail");
-            console.log(info);
+                        <p>Your verification code is:</p>
 
-            return res.json({
-                success: true,
-                message: "OTP sent successfully",
-            });
+                        <h1 style="
+                            letter-spacing:6px;
+                            color:#7c3aed;
+                            font-size:36px;
+                        ">
+                            ${otp}
+                        </h1>
+
+                        <p>This OTP is valid for <b>5 minutes</b>.</p>
+
+                        <p>If you didn't request this, you can safely ignore this email.</p>
+                    </div>
+                `,
+                },
+            {
+                headers: {
+                    "api-key": process.env.BREVO_API_KEY,
+                    "Content-Type": "application/json",
+                },
+            }
+        );
+
+        console.log("BREVO RESPONSE:", response.data);
 
         } catch (err) {
-            console.error("SENDMAIL ERROR");
-            console.error(err);
+            console.error("BREVO ERROR:", err.response?.data || err.message);
 
             return res.status(500).json({
                 success: false,
-                message: err.message,
+                message: err.response?.data?.message || "Failed to send OTP",
             });
         }
-
-        console.log("RETURNING SUCCESS 123456");
 
         res.json({
             success:true,
