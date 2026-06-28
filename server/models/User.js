@@ -22,15 +22,6 @@ const userSchema = new mongoose.Schema({
       default: null
     },
 
-    loginOTP:{
-      type:String,
-      default:""
-    },
-
-    loginOTPExpiry:{
-      type:Date
-    }
-
 }, {timestamps: true})
 
 const User = mongoose.model('User', userSchema)

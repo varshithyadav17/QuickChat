@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs"
 import cloudinary from "../lib/cloudinary.js"
 import { signupSchema, loginSchema } from "../validations/userValidation.js"
 import axios from "axios";
+import { redis } from "../lib/redis.js";
 
 // signup a new user 
 export const signup = async (req, res) => {
@@ -143,11 +144,18 @@ export const sendLoginOTP = async (req,res)=>{
         const otp = Math.floor(
             100000 + Math.random()*900000
         ).toString()
+        
+        const OTP_TTL = 300; // 5 minutes
 
-        user.loginOTP = otp
-        user.loginOTPExpiry = Date.now() + 5*60*1000
+        await redis.set(
+            `otp:${email}`,
+            String(otp),
+            {
+                ex: OTP_TTL 
+            }
+        );
 
-        await user.save()
+        console.log("OTP Stored in Redis");
 
         try {
             const response = await axios.post(
@@ -231,24 +239,23 @@ export const verifyLoginOTP = async (req,res)=>{
             })
         }
 
-        if(user.loginOTP !== otp){
-            return res.json({
-                success:false,
-                message:"Incorrect OTP"
-            })
-        }
+        const storedOTP = await redis.get(`otp:${email}`);
 
-        if(user.loginOTPExpiry < Date.now()){
+        if(!storedOTP){
             return res.json({
                 success:false,
                 message:"OTP expired"
-            })
+            });
         }
 
-        user.loginOTP = ""
-        user.loginOTPExpiry = null
+        if(String(storedOTP) !== String(otp)){
+            return res.json({
+                success:false,
+                message:"Incorrect OTP"
+            });
+        }
 
-        await user.save()
+        await redis.del(`otp:${email}`);
 
         const token = generateToken(user._id)
 
