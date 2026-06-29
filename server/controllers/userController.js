@@ -6,6 +6,13 @@ import { signupSchema, loginSchema } from "../validations/userValidation.js"
 import axios from "axios";
 import { redis } from "../lib/redis.js";
 
+
+const OTP_LIMIT = 2;
+const OTP_WINDOW = 180;
+const OTP_TTL = 300;
+const USER_CACHE_TTL = 600;
+
+
 // signup a new user 
 export const signup = async (req, res) => {
     const { fullName, email, password, bio } = req.body
@@ -34,6 +41,10 @@ export const signup = async (req, res) => {
             password: hashedPassword,
             bio
         })
+
+        await redis.set(`user:${newUser._id}`, newUser, {
+            ex: USER_CACHE_TTL,
+        });
 
         const token = generateToken(newUser._id)
 
@@ -80,7 +91,11 @@ export const login = async (req, res) => {
         }
 
         const token = generateToken(userData._id)
-        const updatedUser = await User.findByIdAndUpdate(userData._id, {lastSeen: null})
+        const updatedUser = await User.findByIdAndUpdate(userData._id, {lastSeen: null}, {new: true})
+
+        await redis.set(`user:${userData._id}`, updatedUser, {
+            ex: USER_CACHE_TTL,
+        });
 
         res.json({success: true, userData: updatedUser, token, message: "Login successful"})
 
@@ -92,9 +107,37 @@ export const login = async (req, res) => {
 }
 
 //controller to check if the user is authenticated
-export const checkAuth = async (req,res) =>{
-    res.json({success: true, user: req.user})
-}
+export const checkAuth = async (req, res) => {
+
+    const cacheKey = `user:${req.user._id}`;
+
+    // Check Redis first
+    const cachedUser = await redis.get(cacheKey);
+
+    if (cachedUser) {
+        console.log("✅ User Cache HIT");
+
+        return res.json({
+            success: true,
+            user: cachedUser,
+        });
+    }
+
+    console.log("❌ User Cache MISS");
+
+    // Get latest user from MongoDB
+    const user = await User.findById(req.user._id);
+
+    // Store in Redis for 10 minutes
+    await redis.set(cacheKey, user, {
+        ex: USER_CACHE_TTL,
+    });
+
+    res.json({
+        success: true,
+        user,
+    });
+};
 
 //controller to update the user profile details
 export const updateProfile = async (req, res) => {
@@ -111,6 +154,11 @@ export const updateProfile = async (req, res) => {
             updatedUser = await User.findByIdAndUpdate(userId, {profilePic: upload.secure_url, bio, fullName }, {new: true})
         }
 
+        // Delete cached profile
+        await redis.set(`user:${userId}`, updatedUser, {
+            ex: USER_CACHE_TTL,
+        });
+
         res.json({success: true, userData: updatedUser, message: "Profile updated successfully"})
 
     } catch (error) {
@@ -119,8 +167,6 @@ export const updateProfile = async (req, res) => {
     }
 }
 
-const OTP_LIMIT = 2;
-const OTP_WINDOW = 180; // 15 minutes
 export const sendLoginOTP = async (req,res)=>{
 
     const { email } = req.body
@@ -179,8 +225,7 @@ export const sendLoginOTP = async (req,res)=>{
         const otp = Math.floor(
             100000 + Math.random()*900000
         ).toString()
-        
-        const OTP_TTL = 300; // 5 minutes
+
 
         await redis.set(
             `otp:${email}`,
