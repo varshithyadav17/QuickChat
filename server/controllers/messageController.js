@@ -4,6 +4,7 @@ import cloudinary from "../lib/cloudinary.js"
 import { io, userSocketMap } from "../server.js"
 import { redis } from "../lib/redis.js";
 
+const CHAT_CACHE_TTL = 600;
 
 // get all user for sidebar 
 export const getUserForSidebar = async (req, res) => {
@@ -98,26 +99,86 @@ export const getUserForSidebar = async (req, res) => {
 }
 
 // get all messages for selected user 
-export const getMessages = async (req,res) => {
+export const getMessages = async (req, res) => {
     try {
-        const { id: selectedUserId } = req.params
-        const myId = req.user._id
 
+        const { id: selectedUserId } = req.params;
+        const myId = req.user._id;
+
+        const chatKey = `chat:${[myId.toString(), selectedUserId.toString()].sort().join(":")}`;
+
+        // 1. Check Redis
+        const cachedMessages = await redis.get(chatKey);
+
+        if (cachedMessages) {
+
+            console.log("✅ Chat Cache HIT");
+
+            await Message.updateMany(
+                {
+                    senderId: selectedUserId,
+                    receiverId: myId,
+                },
+                {
+                    seen: true,
+                }
+            );
+
+            return res.json({
+                success: true,
+                messages: cachedMessages,
+            });
+        }
+
+        console.log("❌ Chat Cache MISS");
+
+        // 2. MongoDB
         const messages = await Message.find({
             $or: [
-                {senderId: myId, receiverId: selectedUserId},
-                {senderId: selectedUserId, receiverId: myId}
-            ]
-        }).sort({ createdAt: 1 })
-        await Message.updateMany({senderId: selectedUserId, receiverId: myId}, {seen: true})
+                {
+                    senderId: myId,
+                    receiverId: selectedUserId,
+                },
+                {
+                    senderId: selectedUserId,
+                    receiverId: myId,
+                },
+            ],
+        }).sort({
+            createdAt: 1,
+        });
 
-        res.json({success: true, messages})
+        await Message.updateMany(
+            {
+                senderId: selectedUserId,
+                receiverId: myId,
+            },
+            {
+                seen: true,
+            }
+        );
+
+        // 3. Store in Redis
+        await redis.set(chatKey, messages, {
+            ex: CHAT_CACHE_TTL,
+        });
+
+        res.json({
+            success: true,
+            messages,
+        });
 
     } catch (error) {
-        console.log(error.message)
-        res.json({success: false, message: error.message})
+
+        console.log(error.message);
+
+        res.json({
+            success: false,
+            message: error.message,
+        });
+
     }
-}
+};
 
 
 // Api to mark messages as seen using messages id
@@ -176,6 +237,15 @@ export const sendMessage = async (req, res) => {
             text,
             image: imageUrl
         })
+
+        const chatKey = `chat:${[
+            senderId.toString(),
+            receiverId.toString(),
+        ].sort().join(":")}`;
+
+        await redis.del(chatKey);
+
+        console.log("🗑 Chat Cache Invalidated");
         
         //emit the new message to the receivers socket
         const receiverSockets = userSocketMap[receiverId]
