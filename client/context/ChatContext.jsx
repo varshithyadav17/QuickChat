@@ -14,6 +14,7 @@ export const ChatProvider = ({children}) => {
     const [unseenMessages, setUnseenMessages] = useState({})
     const [showRightSidebar, setShowRightSidebar] = useState(false)
     const [isTyping, setIsTyping] = useState(false)
+    const [messagesLoading, setMessagesLoading] = useState(false);
 
     const {socket, axios} = useContext(AuthContext)
 
@@ -76,14 +77,26 @@ export const ChatProvider = ({children}) => {
     }
 
     // function to get messages for selected users
-    const getMessages = async (userId)=>{
+    const getMessages = async (userId) => {
+
         try {
-            const {data} = await axios.get(`/api/messages/${userId}`)
-            if(data.success){
-                setMessages(data.messages)
+
+            setMessagesLoading(true);
+
+            const { data } = await axios.get(`/api/messages/${userId}`);
+
+            if (data.success) {
+                setMessages(data.messages);
             }
+
         } catch (error) {
-            toast.error(error.messages)
+
+            toast.error(error.message);
+
+        } finally {
+
+            setMessagesLoading(false);
+
         }
     }
 
@@ -180,6 +193,7 @@ export const ChatProvider = ({children}) => {
 
     const value = {
         messages,
+        messagesLoading,
         users,
         selectedUser,
         unseenMessages,
