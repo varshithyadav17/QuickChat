@@ -3,6 +3,18 @@ import User from "../models/User.js";
 import { protectRoute } from "../middleware/auth.js"
 import { io, userSocketMap } from "../server.js"
 
+const emitToUser = (userId, event, data = {}) => {
+
+    const sockets = userSocketMap[userId.toString()];
+
+    if (!sockets) return;
+
+    sockets.forEach(socketId => {
+        io.to(socketId).emit(event, data);
+    });
+
+};
+
 export const searchUser = async (req, res) => {
 
     try {
@@ -133,11 +145,7 @@ export const sendFriendRequest = async (req,res)=>{
         })
         
         // real time update using socket.io
-        const receiverSocketId = userSocketMap[receiverId]
-        if(receiverSocketId){
-            io.to(receiverSocketId).emit("newFriendRequest")
-
-        }
+        emitToUser(receiverId, "newFriendRequest")
 
         res.json({
             success:true,
@@ -222,17 +230,18 @@ export const acceptFriendRequest = async (req,res)=>{
         await FriendRequest.findByIdAndDelete(requestId)
 
         // on spot relationshipstatus change using socket.io
-        const senderSocketId = userSocketMap[request.senderId]
-        if(senderSocketId){
-            io.to(senderSocketId).emit("RequestAccepted", { userId: request.receiverId })
-        
-            io.to(senderSocketId).emit(
-                "RelationshipStatusChanged",
-                {
-                    userId:req.user._id
-                }
-            )
-        }
+        emitToUser(request.senderId, "RequestAccepted", {
+            userId: request.receiverId
+        });
+
+        emitToUser(request.senderId, "RelationshipStatusChanged", {
+            userId: req.user._id
+        });
+
+        // Update all tabs of the accepter too
+        emitToUser(request.receiverId, "RelationshipStatusChanged", {
+            userId: request.senderId
+        });
         
         res.json({
             success:true,
@@ -262,10 +271,14 @@ export const rejectFriendRequest = async (req,res)=>{
         const request = await FriendRequest.findById(requestId)
 
         // real time rejection 
-        const senderSocketId = userSocketMap[request.senderId]
-        if(senderSocketId){
-            io.to(senderSocketId).emit("RequestRejected", { userId: request.receiverId })
-        }
+        emitToUser(request.senderId, "RequestRejected", {
+            userId: request.receiverId
+        });
+
+        // Update all tabs of the rejecter too
+        emitToUser(request.receiverId, "RelationshipStatusChanged", {
+            userId: request.senderId
+        });
 
         await FriendRequest.findByIdAndDelete(requestId)
 
@@ -309,16 +322,13 @@ export const removeFriend = async (req,res) => {
             }
         )
 
-        const friendSocketId = userSocketMap[friendId]
+        emitToUser(friendId, "RelationshipStatusChanged", {
+            userId: req.user._id
+        });
 
-        if(friendSocketId){
-            io.to(friendSocketId).emit(
-                "RelationshipStatusChanged",
-                {
-                    userId:req.user._id
-                }
-            )
-        }
+        emitToUser(req.user._id, "RelationshipStatusChanged", {
+            userId: friendId
+        });
 
         res.json({
             success:true,
@@ -384,16 +394,13 @@ export const blockUser = async (req,res)=>{
             ]
         })
 
-        const blockedUserSocketId = userSocketMap[blockedUserId]
+        emitToUser(blockedUserId, "RelationshipStatusChanged", {
+            userId: req.user._id
+        });
 
-        if(blockedUserSocketId){
-            io.to(blockedUserSocketId).emit(
-                "RelationshipStatusChanged",
-                {
-                    userId: req.user._id
-                }
-            )
-        }
+        emitToUser(req.user._id, "RelationshipStatusChanged", {
+            userId: blockedUserId
+        });
 
         res.json({
             success:true,
@@ -424,15 +431,13 @@ export const unblockUser = async (req,res)=>{
             }
         )
 
-        const unblockedUserSocketId = userSocketMap[req.params.id]
+        emitToUser(req.params.id, "RelationshipStatusChanged", {
+            userId: req.user._id
+        });
 
-        if(unblockedUserSocketId){
-            io.to(unblockedUserSocketId).emit("RelationshipStatusChanged",
-                {
-                    userId:req.user._id
-                }
-            ) 
-        }      
+        emitToUser(req.user._id, "RelationshipStatusChanged", {
+            userId: req.params.id
+        });     
 
         res.json({
             success:true,

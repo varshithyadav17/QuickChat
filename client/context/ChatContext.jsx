@@ -16,7 +16,7 @@ export const ChatProvider = ({children}) => {
     const [isTyping, setIsTyping] = useState(false)
     const [messagesLoading, setMessagesLoading] = useState(false);
 
-    const {socket, axios} = useContext(AuthContext)
+    const {socket, axios, authUser} = useContext(AuthContext)
 
     const selectedUserRef = useRef(null)
 
@@ -26,6 +26,7 @@ export const ChatProvider = ({children}) => {
     },[socket])
 
     useEffect(() => {
+        console.log("SELECTED USER =", selectedUser);
         selectedUserRef.current = selectedUser
         }, [selectedUser]
     )
@@ -121,29 +122,52 @@ export const ChatProvider = ({children}) => {
         if(!socket) return;
         
         socket.on("newMessage", (newMessage)=>{
-            if(selectedUserRef.current && newMessage.senderId === selectedUserRef.current._id){
-                newMessage.seen = true
-                setMessages((prevMessages) => {
-                    return [...prevMessages, newMessage]
-                })
-                axios.put(`/api/messages/mark/${newMessage._id}`)
-                updateUserOrder(newMessage.senderId, newMessage)
-            }else{
-                setUnseenMessages((prevUnseenMessages) => ({
-                    ...prevUnseenMessages,
-                    [newMessage.senderId] : prevUnseenMessages[newMessage.senderId] ? prevUnseenMessages[newMessage.senderId] + 1 : 1
-                }))
+            const currentChatId = selectedUserRef.current?._id;
 
-                updateUserOrder(newMessage.senderId, newMessage)
+            const isCurrentChat =
+                currentChatId &&
+                (
+                    newMessage.senderId === currentChatId ||
+                    newMessage.receiverId === currentChatId
+                );
+
+            const chatUserId =
+                newMessage.senderId === authUser._id
+                    ? newMessage.receiverId
+                    : newMessage.senderId;
+
+            if (isCurrentChat) {
+
+                newMessage.seen = true;
+
+                setMessages(prev => [...prev, newMessage]);
+
+                axios.put(`/api/messages/mark/${newMessage._id}`);
+
+                updateUserOrder(chatUserId, newMessage);
+
+            } else {
+
+                if (newMessage.senderId !== authUser._id) {
+                    setUnseenMessages(prev => ({
+                        ...prev,
+                        [chatUserId]: prev[chatUserId]
+                            ? prev[chatUserId] + 1
+                            : 1
+                    }));
+                }
+
+                updateUserOrder(chatUserId, newMessage);
+
             }
         })
 
         socket.on("UserOffline", ({userId, lastSeen}) => {
             console.log("CHAT OFFLINE", userId)
             console.log(
-        "CURRENT SELECTED:",
-        selectedUserRef.current?._id
-    )
+                "CURRENT SELECTED:",
+                selectedUserRef.current?._id
+            )
             if(selectedUserRef.current?._id == userId){
                 setSelectedUser(prev => ({
                     ...prev,
@@ -152,7 +176,7 @@ export const ChatProvider = ({children}) => {
             }
         })
 
-        socket.on("userOnline", ({userId}) => {
+        socket.on("UserOnline", ({userId}) => {
 
             console.log("CHAT ONLINE", userId)
 
@@ -163,6 +187,16 @@ export const ChatProvider = ({children}) => {
                 }))
 
             }
+        })
+
+        socket.on("messagesSeen", ({ userId }) => {
+
+            setUnseenMessages(prev => {
+                const updated = { ...prev }
+                delete updated[userId]
+               return updated
+            })
+
         })
 
         socket.on("userTyping", ({userId}) => {
@@ -177,17 +211,33 @@ export const ChatProvider = ({children}) => {
             if(selectedUserRef.current?._id === userId){
                 setIsTyping(false)
             }
-        })
+        })        
 
     }
 
     //function to unsubscribe from messages
     const unsubscribeFromMessages = ()=>{
-        if(socket){
-            socket.off("UserOnline")
-            socket.off("newMessage")
-            socket.off("UserOffline")
-        } 
+        if(!socket) return
+        
+        socket.off("UserOnline")
+        socket.off("newMessage")
+        socket.off("UserOffline")
+        socket.off("messagesSeen") 
+        socket.off("userTyping")
+        socket.off("userStopTyping")
+
+        
+    }
+
+    const resetChatState = () => {
+
+        setMessages([]);
+        setUsers([]);
+        setSelectedUser(null);
+        setUnseenMessages({});
+        setShowRightSidebar(false);
+        setIsTyping(false);
+        setMessagesLoading(false);
     }
 
 
@@ -206,7 +256,8 @@ export const ChatProvider = ({children}) => {
         showRightSidebar,
         setShowRightSidebar,
         isTyping, 
-        setIsTyping
+        setIsTyping,
+        resetChatState
     }
 
     return (

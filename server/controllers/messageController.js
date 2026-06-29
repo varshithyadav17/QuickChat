@@ -124,6 +124,16 @@ export const getMessages = async (req, res) => {
                 }
             );
 
+            const mySockets = userSocketMap[myId.toString()];
+
+            if (mySockets) {
+                mySockets.forEach(socketId => {
+                    io.to(socketId).emit("messagesSeen", {
+                        userId: selectedUserId,
+                    });
+                });
+            }
+
             return res.json({
                 success: true,
                 messages: cachedMessages,
@@ -157,6 +167,16 @@ export const getMessages = async (req, res) => {
                 seen: true,
             }
         );
+
+        const mySockets = userSocketMap[myId.toString()];
+
+        if (mySockets) {
+            mySockets.forEach(socketId => {
+                io.to(socketId).emit("messagesSeen", {
+                    userId: selectedUserId,
+                });
+            });
+        }
 
         // 3. Store in Redis
         await redis.set(chatKey, messages, {

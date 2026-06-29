@@ -26,43 +26,59 @@ export const FriendProvider = ({children}) => {
     }, [authUser])
 
     useEffect(() => {
-        if(!socket) return
 
-        socket.on("newFriendRequest", () => {
-            console.log("NEW FRIEND REQUEST RECEIVED")
-            getRequests()
-        })
+        if (!socket) return;
 
-        socket.on("RequestAccepted", async (data) => {
-            getRequests()
-            await getRelationshipStatus(data.userId)
-        })
+        const refreshEverything = async (userId = null) => {
 
-        socket.on("RequestRejected", async (data) => {    
-            getRequests()
-            await getRelationshipStatus(data.userId)
-        })
-        
-        socket.on("UserBlocked", async (data) => {
-            getRequests()
-            await getRelationshipStatus(data.userId)
-        })
+            await getRequests();
+            await getUsers();
+            await getBlockedUsers();
 
-        socket.on("RelationshipStatusChanged",async(data)=>{
-
-            if(selectedUser?._id === data.userId){
-                await getRelationshipStatus(data.userId)
+            if (userId) {
+                await getRelationshipStatus(userId);
             }
-        })
+
+            if (selectedUser?._id) {
+                await getRelationshipStatus(selectedUser._id);
+            }
+
+            if (searchedUser?._id) {
+                await getRelationshipStatus(searchedUser._id);
+            }
+
+        };
+
+        socket.on("newFriendRequest", async () => {
+            console.log("NEW FRIEND REQUEST RECEIVED");
+            await refreshEverything();
+        });
+
+        socket.on("RequestAccepted", async ({ userId }) => {
+            await refreshEverything(userId);
+        });
+
+        socket.on("RequestRejected", async ({ userId }) => {
+            await refreshEverything(userId);
+        });
+
+        socket.on("UserBlocked", async ({ userId }) => {
+            await refreshEverything(userId);
+        });
+
+        socket.on("RelationshipStatusChanged", async ({ userId }) => {
+            await refreshEverything(userId);
+        });
 
         return () => {
-            socket.off("newFriendRequest")
-            socket.off("RequestAccepted")
-            socket.off("RequestRejected")
-            socket.off("UserBlocked")
-            socket.off("RelationshipStatusChanged")
-        }
-    }, [socket, selectedUser])
+            socket.off("newFriendRequest");
+            socket.off("RequestAccepted");
+            socket.off("RequestRejected");
+            socket.off("UserBlocked");
+            socket.off("RelationshipStatusChanged");
+        };
+
+    }, [socket, selectedUser, searchedUser]);
 
 
     const searchUserByEmail = async (email) => {
@@ -200,11 +216,19 @@ export const FriendProvider = ({children}) => {
 
     }
 
+    const resetFriendState = () => {
+        setSearchedUser(null);
+        setRelationshipStatus("none");
+        setRequests([]);
+        setBlockedUsers([]);
+    }
+
     const value={
         requests,
         searchedUser,
         relationshipStatus,
         blockedUsers,
+        resetFriendState,
         getRelationshipStatus,
         removeFriend,
         unblockUser,

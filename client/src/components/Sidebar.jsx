@@ -8,9 +8,9 @@ import { FriendContext } from '../../context/FriendContext';
 
 const Sidebar = () => {
 
-    const {getUsers, users, selectedUser, setSelectedUser, unseenMessages, setUnseenMessages} = useContext(ChatContext)
+    const {getUsers, resetChatState, users, selectedUser, setSelectedUser, unseenMessages, setUnseenMessages} = useContext(ChatContext)
     const {logout, onlineUsers, axios} = useContext(AuthContext)
-    const {requests, searchedUser, relationshipStatus, getRelationshipStatus, searchUserByEmail, sendRequest, getRequests, acceptRequest, rejectRequest, setSearchedUser, setRequests, blockUser, getBlockedUsers, blockedUsers, unblockUser} = useContext(FriendContext)
+    const {requests, resetFriendState, searchedUser, relationshipStatus, getRelationshipStatus, searchUserByEmail, sendRequest, getRequests, acceptRequest, rejectRequest, setSearchedUser, setRequests, blockUser, getBlockedUsers, blockedUsers, unblockUser} = useContext(FriendContext)
 
     const [input, setInput] = useState("")
     const [searchEmail, setSearchEmail] = useState("")
@@ -47,7 +47,20 @@ const Sidebar = () => {
                     Blocked Users
                     </p>
                     <hr className='my-2 border-t border-gray-500'/>
-                    <p onClick={()=> logout()} className='cursor-pointer text-sm'>Logout</p>
+                    <p
+                        onClick={() => {
+
+                            resetChatState();
+
+                            resetFriendState();
+
+                            logout();
+
+                        }}
+                        className="cursor-pointer text-sm"
+                    >
+                    Logout
+                    </p>
                 </div>
             </div>           
         </div>

@@ -110,8 +110,13 @@ export const AuthProvider = ({ children }) => {
         setToken(null)
         setAuthUser(null)
         setOnlineUsers([])
+        setOfflineUsers({})
         axios.defaults.headers.common["token"] = null
-        socket.disconnect()
+        if (socket) {
+            socket.removeAllListeners()
+            socket.disconnect()
+            setSocket(null)
+        }
 
     }
 
@@ -130,7 +135,12 @@ export const AuthProvider = ({ children }) => {
 
     // connect socket function to handle socket connections and online users updates
     const connectSocket = (userData) => {
-        if(!userData || socket?.connected) return;
+        if (!userData) return;
+
+        if (socket) {
+            socket.removeAllListeners();
+            socket.disconnect();
+        }
 
         const newSocket = io(backendUrl, {
             query: {
